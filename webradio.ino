@@ -2,6 +2,22 @@
  * simple internet radio receiver
  * based on https://github.com/schreibfaul1/ESP32-audioI2S example ESP32_ES8388.ino
  *
+ * (C) 2021-2022 Stefan Seyfried,  LICENSE: GPL version 3.0
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Key "features":
  * => no user interface yet, only rotary-encoder for volume
  * => control only via http interface
  *   curl 'http://webradio/control?play=st01.sslstream.dlf.de/dlf/01/mid/aac/stream.aac'
@@ -33,13 +49,14 @@
 #include "wifi_functions.h"
 
 #include <WebServer.h>
-#include <ElegantOTA.h>     // https://github.com/ayushsharma82/ElegantOTA
+#include <ElegantOTA.h>     // https://github.com/ayushsharma82/ElegantOTA, MIT License
 
 #include "LITTLEFS.h"
-#include "ES8388.h"         // https://github.com/maditnerd/es8388
-#include "Audio.h"          // https://github.com/schreibfaul1/ESP32-audioI2S
+#include "ES8388.h"         // https://github.com/maditnerd/es8388, GPLv3
+#include "Audio.h"          // https://github.com/schreibfaul1/ESP32-audioI2S, GPLv3
 
-#include <RotaryEncoder.h>  // https://github.com/mathertel/RotaryEncoder.git
+#include <RotaryEncoder.h>  // https://github.com/mathertel/RotaryEncoder.git, BSD License
+
 
 /* es8388 config */
 // I2S GPIOs
