@@ -101,6 +101,9 @@ const char*keydesc[] = { "BOOT", "KEY1", "KEY2", "KEY3", "HPD" };
 
 #define FORMAT_LITTLEFS_IF_FAILED true
 
+/* maximum volume, 21 i2s + 96 es8288 steps */
+#define MAX_VOL 117
+
 /* web page helper function */
 void add_header(String &s, String title)
 {
@@ -198,8 +201,8 @@ int set_volume(int vol)
 {
     if (vol < 0)
         vol = 0;
-    if (vol > 117)
-        vol = 117;
+    if (vol > MAX_VOL)
+        vol = MAX_VOL;
     if (vol < 22) {
         es.volume(VOLCTRL, 1);
         audio.setVolume(vol);
