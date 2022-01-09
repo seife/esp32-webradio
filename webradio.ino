@@ -19,6 +19,7 @@
  *
  * Key "features":
  * => no user interface yet, only rotary-encoder for volume
+ * => basic status display via a SPI connected SH1106 display
  * => control only via http interface
  *   curl 'http://webradio/control?play=st01.sslstream.dlf.de/dlf/01/mid/aac/stream.aac'
  *   => play http://st01.sslstream.dlf.de/dlf/01/mid/aac/stream.aac
@@ -41,7 +42,7 @@
  * GPIO config is for the AI-Thinker ESP32 Audio Kit v2.2 with ES8388 audio chip
  * => https://github.com/Ai-Thinker-Open/ESP32-A1S-AudioKit
  *
- * TODO: add some User interface with a TFT, oled or a 16x2 LCD
+ * TODO: add some User interface to the display code.
  */
 
 #define AAC_ENABLE_SBR 1
@@ -57,6 +58,8 @@
 
 #include <RotaryEncoder.h>  // https://github.com/mathertel/RotaryEncoder.git, BSD License
 
+#include "SH1106Spi.h"      // https://github.com/ThingPulse/esp8266-oled-ssd1306, MIT License
+#include "OLEDDisplayUi.h"
 
 /* es8388 config */
 // I2S GPIOs
@@ -74,9 +77,17 @@
 // Headphone detect
 #define GPIO_HPD      39
 
+/* SPI pins for SH1106 OLED display */
+#define DISP_MOSI 23
+#define DISP_SCLK 18
+#define DISP_CS   -1  // Chip select control pin is hard wired to ground
+#define DISP_DC    5  // Data Command control pin. 5 is VSPI_CS, but CS is unused.
+#define DISP_RST  19  // original MISO, not used on OLED display
+
 /* Global variables */
 int volume = 50; /* default if no config in flash */
 unsigned long last_save = 0;
+unsigned long last_volume = 0;
 String A_station, A_streaminfo, A_streamtitle, A_bitrate, A_icyurl, A_lasthost, A_url;
 bool playing = false;
 
@@ -88,23 +99,22 @@ RotaryEncoder *encoder = nullptr;
 WebServer server(80);
 ES8388 es;
 Audio audio;
+SH1106Spi display(DISP_RST, DISP_DC, DISP_CS); /* CS is unused anyway */
+OLEDDisplayUi ui(&display);
 
+#if 0
 /* onboard  buttons
  *             BOOT
  *                1   2   3   4   5   6
  */
 int keys[] = { 2, 36, 13, 19, 23, 18, 5, GPIO_HPD };
 const char*keydesc[] = { "BOOT", "KEY1", "KEY2", "KEY3", "KEY4", "KEY5", "KEY6", "HPD" };
-#if 0
-/* SPI connection for future display code? */
-#define TFT_MOSI 23
-#define TFT_SCLK 18
-#define TFT_CS    5  // Chip select control pin
-#define TFT_DC   22  // Data Command control pin
-int keys[] = { 2, 36, 13, 19, GPIO_HPD };
-const char*keydesc[] = { "BOOT", "KEY1", "KEY2", "KEY3", "HPD" };
-#endif
+
+/* with SPI display, most key GPIOs are used for SPI */
+int keys[] = { 2, 36, 13, GPIO_HPD };
+const char*keydesc[] = { "BOOT", "KEY1", "KEY2", "HPD" };
 #define NUMKEYS (sizeof(keys)/sizeof(int))
+#endif
 
 /* onboard LEDs */
 #define LED_D4 22
@@ -230,6 +240,7 @@ int set_volume(int vol)
         Serial.printf("vol: %d ctrl: %d i2s: %d\r\n", vol, vol-21, 21);
     }
     last_save = millis();
+    last_volume = millis();
     return vol;
 }
 
@@ -298,7 +309,41 @@ unsigned long save_config()
     return millis();
 }
 
+void draw_display(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y)
+{
+    /* TODO: scroll if text exceeds display size */
+    display->setFont(ArialMT_Plain_16);
+    display->drawString(x, y, A_station);
+    display->setFont(ArialMT_Plain_10);
+    display->drawStringMaxWidth(x, x+16, 128, A_streamtitle);
+}
 
+#define VOL_H 12
+void draw_volume(OLEDDisplay *display, OLEDDisplayUiState* state)
+{
+    if (millis() - last_volume > 5000)
+        return; /* only drav volume bar for 5 seconds */
+    int progress = volume * 100 / MAX_VOL;
+    /* clear background of volume bar */
+    display->setColor(BLACK);
+    display->fillRect(0, 64 - VOL_H - 1, 128, VOL_H + 1);
+    /* draw volume_bar */
+    display->setColor(WHITE);
+    display->drawProgressBar(0, 64 - VOL_H - 1, 127, VOL_H, progress);
+    /* draw caption inside volume bar */
+    display->setColor(INVERSE);
+    display->setFont(ArialMT_Plain_10);
+    display->setTextAlignment(TEXT_ALIGN_CENTER_BOTH);
+    display->drawString(64, 64 - VOL_H/2 - 1, "Volume " +String(progress, DEC) + "%");
+    /* reset settings */
+    display->setTextAlignment(TEXT_ALIGN_LEFT);
+    display->setColor(WHITE);
+}
+
+FrameCallback frames[] = { draw_display };
+int frameCount = 1;
+OverlayCallback overlays[] = { draw_volume };
+int overlaysCount = 1;
 
 void setup()
 {
@@ -317,6 +362,14 @@ void setup()
         int ret = load_config(volume, A_url, true);
         playing = ret & CONF_PLAY;
     }
+
+    SPI.begin(DISP_SCLK, DISP_MOSI, DISP_MOSI, DISP_CS); /* explicitly MISO=MOSI to free MISO pin for RESET */
+    ui.setTargetFPS(10);
+    ui.setFrames(frames, frameCount);
+    ui.setOverlays(overlays, overlaysCount);
+    ui.disableAutoTransition();
+    ui.disableAllIndicators();
+    ui.init();
 
     encoder = new RotaryEncoder(PIN_IN1, PIN_IN2, RotaryEncoder::LatchMode::TWO03);
     attachInterrupt(digitalPinToInterrupt(PIN_IN1), checkPosition, CHANGE);
@@ -422,6 +475,8 @@ void loop()
     server.handleClient();
     if (millis() - last_save > 10000)
         last_save = save_config();
+
+    ui.update();
 }
 
 /* functions for callbacks from audio decoder */

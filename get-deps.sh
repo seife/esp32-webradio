@@ -6,6 +6,7 @@ DEPS=(
 	https://github.com/maditnerd/es8388
 	https://github.com/mathertel/RotaryEncoder.git
 	https://github.com/ayushsharma82/ElegantOTA.git
+	https://github.com/ThingPulse/esp8266-oled-ssd1306
 )
 
 if ! [ -d "$DEPS_DIR" ]; then
