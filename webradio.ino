@@ -139,10 +139,11 @@ uint32_t uptime_sec()
 /* web page helper function */
 void add_header(String &s, String title)
 {
-    s += "<!DOCTYPE HTML><html><head>"
-        "<title>" + title + "</title>"
-        "<meta charset=\"utf-8\">"
-        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+    s += "<!DOCTYPE HTML><html lang=\"en\"><head>\n"
+        "<meta charset=\"utf-8\">\n"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+        "<meta name=\"description\" content=\"my web radio\">\n"
+        "<title>" + title + "</title>\n"
         "</head>\n<body>"
         "<H1>" + title + "</H1>\n";
 }
@@ -166,12 +167,13 @@ void handle_index()
         "<tr><td>Stream URL</td><td>" + A_url + "</td></tr>\n"
         "<tr><td>found lasthost</td><td>" + A_lasthost + "</td></tr>\n"
         "<tr><td>found icy URL</td><td>" + A_icyurl +"</td></tr>\n"
-        "</table>\n<p>\n"
+        "</table>\n"
+        "<p></p>\n"
         "<form action=\"/control\">"
         "Playback URL: "
-        "<input type=\"text\" name=\"play\">"
-        "<input type=\"submit\" value=\"Submit\"><p>\n"
-        "<br><a href=\"/update\">Update software</a>\n";
+        "<input name=\"play\">"
+        "<button type=\"submit\">Submit</button></form>\n"
+        "<p><a href=\"/update\">Update software</a></p>\n";
     add_sysinfo(index);
     index +=
         "</body></html>\n";
