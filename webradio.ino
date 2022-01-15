@@ -202,6 +202,7 @@ void handle_control()
         String url = server.arg("play");
         if (url.length() > 0)
             A_url = url;
+        A_url.trim(); /* hack, a " " clears the URL */
         change_station(A_url);
         last_save = millis();
     }
