@@ -131,6 +131,11 @@ const char*keydesc[] = { "BOOT", "KEY1", "KEY2", "HPD" };
 /* maximum volume, 21 i2s + 96 es8288 steps */
 #define MAX_VOL 117
 
+uint32_t uptime_sec()
+{
+    return (uint32_t) esp_timer_get_time()/(int64_t)1000000;
+}
+
 /* web page helper function */
 void add_header(String &s, String title)
 {
@@ -140,6 +145,14 @@ void add_header(String &s, String title)
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
         "</head>\n<body>"
         "<H1>" + title + "</H1>\n";
+}
+
+void add_sysinfo(String &s)
+{
+    s += "<p>System information: "
+        "Uptime: " + String(uptime_sec(), DEC) +
+        "sec, Total PSRAM: " + String(ESP.getPsramSize() / 1024) + "kiB, Free PSRAM: " + String(ESP.getFreePsram() / 1024) + "kiB"
+        "</p>\n";
 }
 
 void handle_index()
@@ -158,8 +171,10 @@ void handle_index()
         "Playback URL: "
         "<input type=\"text\" name=\"play\">"
         "<input type=\"submit\" value=\"Submit\"><p>\n"
-        "<br><a href=\"/update\">Update software</a>\n"
-        "</body>\n";
+        "<br><a href=\"/update\">Update software</a>\n";
+    add_sysinfo(index);
+    index +=
+        "</body></html>\n";
     server.send(200, "text/html", index);
 }
 
@@ -208,7 +223,10 @@ void handle_control()
         "  \"station\": \"" + json_replace(A_station) + "\",\n"
         "  \"title\": \"" + json_replace(A_streamtitle) + "\",\n"
         "  \"playing\": " + String(playing) + ",\n"
-        "  \"volume\": " + String(volume) + "\n"
+        "  \"volume\": " + String(volume) + ",\n"
+        "  \"uptime\": " + String(uptime_sec()) + ",\n"
+        "  \"psram\": " + String(ESP.getPsramSize()) + ",\n"
+        "  \"psram_free\": " + String(ESP.getFreePsram()) + "\n"
         "}\n";
     server.send(200, "application/json", index);
 }
