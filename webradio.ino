@@ -32,8 +32,8 @@
  *   curl 'http://webradio/control?vol=+5' or curl 'http://webradio/control?vol=-2'
  *   => increase / decrease volume
  *
- * Current config (url, volume, playstate) is saved to LITTLEFS 10 seconds after last change.
- * During start, config is loaded from LITTLEFS and playback resumes.
+ * Current config (url, volume, playstate) is saved to LittleFS 10 seconds after last change.
+ * During start, config is loaded from LittleFS and playback resumes.
  * Littlefs tree:
  * -- /url => contains current URL
  *    /vol => contains current volume
@@ -52,7 +52,7 @@
 #include <WebServer.h>
 #include <ElegantOTA.h>     // https://github.com/ayushsharma82/ElegantOTA, MIT License
 
-#include "LITTLEFS.h"
+#include "LittleFS.h"
 #include "ES8388.h"         // https://github.com/maditnerd/es8388, GPLv3
 #include "Audio.h"          // https://github.com/schreibfaul1/ESP32-audioI2S, GPLv3
 
@@ -265,7 +265,7 @@ int set_volume(int vol)
     return vol;
 }
 
-/* LITTLEFS helper functions */
+/* LittleFS helper functions */
 String read_file(File &file)
 {
     String ret;
@@ -277,7 +277,7 @@ String read_file(File &file)
 int load_config(int &v, String &u, bool debug=false)
 {
     int ret = 0;
-    File cfg = LITTLEFS.open("/volume");
+    File cfg = LittleFS.open("/volume");
     if (cfg) {
         ret |= CONF_VOL;
         v = read_file(cfg).toInt();
@@ -285,7 +285,7 @@ int load_config(int &v, String &u, bool debug=false)
             Serial.printf("load_config: v is %d\r\n", v);
         cfg.close();
     }
-    cfg = LITTLEFS.open("/url");
+    cfg = LittleFS.open("/url");
     if (cfg) {
         ret |= CONF_URL;
         u = read_file(cfg);
@@ -293,7 +293,7 @@ int load_config(int &v, String &u, bool debug=false)
             Serial.println("load_config: u is " + u);
         cfg.close();
     }
-    if (LITTLEFS.exists("/playing"))
+    if (LittleFS.exists("/playing"))
         ret |= CONF_PLAY;
     if (debug)
         Serial.println("load_config: ret = " +String(ret));
@@ -307,23 +307,23 @@ unsigned long save_config()
     ret = load_config(v, u);
     if (!(ret & CONF_VOL) || v != volume) {
         Serial.println("Save volume...");
-        File cfg = LITTLEFS.open("/volume", FILE_WRITE);
+        File cfg = LittleFS.open("/volume", FILE_WRITE);
         cfg.print(volume);
         cfg.close();
     }
     if (!(ret & CONF_URL) || u != A_url) {
         Serial.println("Save URL...");
-        File cfg = LITTLEFS.open("/url", FILE_WRITE);
+        File cfg = LittleFS.open("/url", FILE_WRITE);
         cfg.print(A_url);
         cfg.close();
     }
     if ((ret & CONF_PLAY) && !playing) {
         Serial.println("remove /playing");
-        LITTLEFS.remove("/playing");
+        LittleFS.remove("/playing");
     }
     if (playing && !(ret & CONF_PLAY)) {
         Serial.println("create /playing");
-        File cfg = LITTLEFS.open("/playing", FILE_WRITE);
+        File cfg = LittleFS.open("/playing", FILE_WRITE);
         cfg.print("");
         cfg.close();
     }
@@ -374,12 +374,12 @@ void setup()
     psramInit();
     Serial.print("PSRAM: ");
     Serial.println(ESP.getPsramSize());
-    bool littlefs_ok = LITTLEFS.begin(FORMAT_LITTLEFS_IF_FAILED);
+    bool littlefs_ok = LittleFS.begin(FORMAT_LITTLEFS_IF_FAILED);
     if (!littlefs_ok)
-        Serial.println("LITTLEFS Mount Failed");
+        Serial.println("LittleFS Mount Failed");
     else {
-        Serial.print("LITTLEFS total: "); Serial.println(LITTLEFS.totalBytes());
-        Serial.print("LITTLEFS used:  "); Serial.println(LITTLEFS.usedBytes());
+        Serial.print("LittleFS total: "); Serial.println(LittleFS.totalBytes());
+        Serial.print("LittleFS used:  "); Serial.println(LittleFS.usedBytes());
         int ret = load_config(volume, A_url, true);
         playing = ret & CONF_PLAY;
     }
