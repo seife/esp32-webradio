@@ -18,8 +18,9 @@ else
 	PARAM+=(--libraries deps)
 fi
 # for some reason, this is not always enough to make PSRAM work. Full params are extracted from IDE GUI build
-# BOARD_PARAM=:PSRAM=enabled,PartitionScheme=min_spiffs
-BOARD_PARAM=:PSRAM=enabled,PartitionScheme=min_spiffs,CPUFreq=240,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=921600,DebugLevel=none
+#BOARD_PARAM=esp32:esp32:esp32:PSRAM=enabled,PartitionScheme=min_spiffs
+#BOARD_PARAM=esp32:esp32:esp32:PartitionScheme=min_spiffs
+BOARD_PARAM=esp32:esp32:esp32wrover:PartitionScheme=min_spiffs
 set -x
 arduino-cli "$IAM" \
-	-b esp32:esp32:esp32${BOARD_PARAM} "${PARAM[@]}" $@
+	-b ${BOARD_PARAM} "${PARAM[@]}" $@
