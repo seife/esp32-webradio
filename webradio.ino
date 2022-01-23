@@ -91,6 +91,9 @@ unsigned long last_volume = 0;
 String A_station, A_streaminfo, A_streamtitle, A_bitrate, A_icyurl, A_lasthost, A_url;
 bool playing = false;
 
+/* configuration */
+int buf_sz = 32768;
+
 enum { CONF_VOL = 1, CONF_URL = 2, CONF_PLAY = 4 };
 
 RotaryEncoder *encoder = nullptr;
@@ -414,7 +417,13 @@ void setup()
 
     audio.setPinout(I2S_BCLK, I2S_LRCK, I2S_SDOUT);
     audio.i2s_mclk_pin_select(I2S_MCLK);
-
+#if 0
+    /* try to use PSRAM with buf_sz size */
+    audio.setBufsize(-1, buf_sz);
+#else
+    /* do not try PSRAM */
+    audio.setBufsize(buf_sz, 0);
+#endif
     volume = set_volume(volume);
 
     es.mute(ES8388::ES_OUT1, true);     /* loudspeaker */
