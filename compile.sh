@@ -13,7 +13,7 @@ if [ "$IAM" = upload ]; then
 	shift
 else
 	# this avoids having to change the config of ESP32-audioI2S
-	PARAM=(--build-property "build.defines=-DAAC_ENABLE_SBR=1")
+	PARAM=(--build-property "build.extra_flags.esp32=-DARDUINO_USB_CDC_ON_BOOT=0 -DAAC_ENABLE_SBR=1")
 	# use local deps subdirectory
 	PARAM+=(--libraries deps)
 fi
