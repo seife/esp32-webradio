@@ -88,6 +88,7 @@
 int volume = 50; /* default if no config in flash */
 unsigned long last_save = 0;
 unsigned long last_volume = 0;
+unsigned long last_reconnect = (unsigned long)-5000;
 String A_station, A_streaminfo, A_streamtitle, A_bitrate, A_icyurl, A_lasthost, A_url;
 bool playing = false;
 
@@ -467,6 +468,7 @@ void change_station(String url)
     if (url.length() > 0) {
         playing = true;
         audio.connecttohost(A_url.c_str());
+        last_reconnect = millis();
     } else {
         playing = false;
         audio.stopSong();
@@ -505,7 +507,7 @@ void loop()
 
     /* if wifi is not connected initially, start playing after connect */
     if (playing && !audio.isRunning() && wifi_state == STATE_CONN) {
-        if (A_url.length() > 0) {
+        if (A_url.length() > 0 && millis() - last_reconnect > 5000) {
             Serial.println("audio not running => connect!");
             change_station(A_url.c_str());
         }
