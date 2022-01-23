@@ -91,6 +91,7 @@ unsigned long last_volume = 0;
 unsigned long last_reconnect = (unsigned long)-5000;
 String A_station, A_streaminfo, A_streamtitle, A_bitrate, A_icyurl, A_lasthost, A_url;
 bool playing = false;
+bool updating = false;
 
 /* configuration */
 int buf_sz = 32768;
@@ -178,6 +179,7 @@ void add_sysinfo(String &s)
 void handle_index()
 {
     String index;
+    updating = false;
     add_header(index, "Webradio");
     index +=
         "<table>\n"
@@ -192,7 +194,7 @@ void handle_index()
         "Playback URL: "
         "<input name=\"play\">"
         "<button type=\"submit\">Submit</button></form>\n"
-        "<p><a href=\"/update\">Update software</a></p>\n";
+        "<p><a href=\"/update2\">Update software</a></p>\n";
     add_sysinfo(index);
     index +=
         "</body></html>\n";
@@ -251,6 +253,23 @@ void handle_control()
         "  \"psram_free\": " + String(ESP.getFreePsram()) + "\n"
         "}\n";
     server.send(200, "application/json", index);
+}
+
+void handle_update2()
+{
+    String index =
+        "<!DOCTYPE HTML><html lang=\"en\"><head>\n"
+        "<meta charset=\"utf-8\">\n"
+        "<meta http-equiv=\"refresh\" content=\"0; url=/update\" />\n"
+        "<title>forward to /update...</title>\n"
+        "</head>\n<body>\n"
+        "<p><a href=\"/update\">Update</a></p>\n"
+        "</body>\n</html>\n";
+    updating = true;
+    audio.stopSong();
+    A_station = "OTA update...";
+    A_streamtitle = "";
+    server.send(200, "text/html", index);
 }
 
 /* encoder interrupt routine */
@@ -452,6 +471,7 @@ void setup()
     server.on("/", handle_index);
     server.on("/index.html", handle_index);
     server.on("/control", handle_control);
+    server.on("/update2", handle_update2);
     server.onNotFound([](){
         server.send(404, "text/plain", "The content you are looking for was not found.\n");
         Serial.println("404: " + server.uri());
@@ -506,7 +526,7 @@ void loop()
     audio.loop();
 
     /* if wifi is not connected initially, start playing after connect */
-    if (playing && !audio.isRunning() && wifi_state == STATE_CONN) {
+    if (!updating && playing && !audio.isRunning() && wifi_state == STATE_CONN) {
         if (A_url.length() > 0 && millis() - last_reconnect > 5000) {
             Serial.println("audio not running => connect!");
             change_station(A_url.c_str());
