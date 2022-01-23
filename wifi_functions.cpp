@@ -28,7 +28,7 @@ void WiFiEvent(WiFiEvent_t event)
             wifi_state = STATE_DISC;
             break;
         case SYSTEM_EVENT_STA_GOT_IP:
-            Serial.printf("Connected to: %s, Got IP: ",WiFi.SSID().c_str());
+            Serial.printf("Connected to: %s (%s), Got IP: ",WiFi.SSID().c_str(),WiFi.BSSIDstr().c_str());
             Serial.println(WiFi.localIP());
             wifi_state = STATE_CONN;
             break;
