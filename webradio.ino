@@ -136,7 +136,7 @@ const char*keydesc[] = { "BOOT", "KEY1", "KEY2", "HPD" };
 
 uint32_t uptime_sec()
 {
-    return (uint32_t) esp_timer_get_time()/(int64_t)1000000;
+    return (esp_timer_get_time()/(int64_t)1000000);
 }
 
 /* web page helper function */
@@ -151,11 +151,26 @@ void add_header(String &s, String title)
         "<H1>" + title + "</H1>\n";
 }
 
+String time_string(void)
+{
+    uint32_t now = uptime_sec();
+    char timestr[10];
+    String ret = "";
+    if (now >= 24*60*60)
+        ret += String(now / (24*60*60)) + "d ";
+    now %= 24*60*60;
+    snprintf(timestr, 10, "%02d:%02d:%02d", now / (60*60), (now % (60*60)) / 60, now % 60);
+    ret += String(timestr);
+    return ret;
+}
+
 void add_sysinfo(String &s)
 {
     s += "<p>System information: "
-        "Uptime: " + String(uptime_sec(), DEC) +
-        "sec, Total PSRAM: " + String(ESP.getPsramSize() / 1024) + "kiB, Free PSRAM: " + String(ESP.getFreePsram() / 1024) + "kiB"
+        "Uptime: " + time_string() +
+        ", Total PSRAM: " + String(ESP.getPsramSize() / 1024) +
+        "kiB, Free PSRAM: " + String(ESP.getFreePsram() / 1024) +
+        "kiB, build date: " + __DATE__ +", " + __TIME__ +
         "</p>\n";
 }
 
