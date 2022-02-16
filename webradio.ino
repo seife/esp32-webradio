@@ -210,8 +210,10 @@ void handle_index()
         "<p></p>\n"
         "<form action=\"/control\">"
         "Playback URL: "
-        "<input name=\"play\">"
-        "<button type=\"submit\">Submit</button></form>\n"
+        "<input name=\"play\" style=\"width: 50%\">"
+        "<button type=\"submit\">Submit</button>\n"
+        "<input type=\"hidden\" name=\"html\" value=\"true\">\n"
+        "</form>\n"
         "<p><a href=\"/update2\">Update software</a></p>\n";
     add_sysinfo(index);
     index +=
@@ -237,6 +239,7 @@ void handle_control()
     Serial.println("/control. Args:");
     for (int i = 0; i < server.args(); i++)
         Serial.printf("  %d: '%s'='%s'\r\n", i, server.argName(i).c_str(), server.arg(i).c_str());
+    bool html = server.hasArg("html");
     if (server.hasArg("play")) {
         String url = server.arg("play");
         if (url.length() > 0)
@@ -259,7 +262,18 @@ void handle_control()
             volume = set_volume(vol);
     }
     /* TODO: use proper JSON liberary? */
-    String index =
+    String index;
+    if (html) {
+        index =
+        "<!DOCTYPE HTML><html lang=\"en\"><head>\n"
+        "<meta charset=\"utf-8\">\n"
+        "<meta http-equiv=\"refresh\" content=\"2; url=/\" />\n"
+        "<title>Settings applied...</title>\n"
+        "</head>\n<body>\n"
+        "<p><a href=\"/\">back</a></p>\n"
+        "</body>\n</html>\n";
+    } else {
+        index =
         "{\n"
         "  \"url\": \"" + json_replace(A_url) + "\",\n"
         "  \"station\": \"" + json_replace(A_station) + "\",\n"
@@ -271,7 +285,8 @@ void handle_control()
         "  \"psram\": " + String(ESP.getPsramSize()) + ",\n"
         "  \"psram_free\": " + String(ESP.getFreePsram()) + "\n"
         "}\n";
-    server.send(200, "application/json", index);
+    }
+    server.send(200, html?"text/html":"application/json", index);
 }
 
 void handle_update2()
