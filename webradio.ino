@@ -215,7 +215,7 @@ void handle_index()
         "<button type=\"submit\">Submit</button>\n"
         "<input type=\"hidden\" name=\"html\" value=\"true\">\n"
         "</form>\n"
-        "<p><a href=\"/update2\">Update software</a></p>\n";
+        "<p><a href=\"/update\">Update software</a></p>\n";
     add_sysinfo(index);
     index +=
         "</body></html>\n";
@@ -288,23 +288,6 @@ void handle_control()
         "}\n";
     }
     server.send(200, html?"text/html":"application/json", index);
-}
-
-void handle_update2()
-{
-    String index =
-        "<!DOCTYPE HTML><html lang=\"en\"><head>\n"
-        "<meta charset=\"utf-8\">\n"
-        "<meta http-equiv=\"refresh\" content=\"0; url=/update\" />\n"
-        "<title>forward to /update...</title>\n"
-        "</head>\n<body>\n"
-        "<p><a href=\"/update\">Update</a></p>\n"
-        "</body>\n</html>\n";
-    updating = true;
-    audio.stopSong();
-    A_station = "OTA update...";
-    A_streamtitle = "";
-    server.send(200, "text/html", index);
 }
 
 /* encoder interrupt routine */
@@ -610,7 +593,6 @@ void setup()
     server.on("/", handle_index);
     server.on("/index.html", handle_index);
     server.on("/control", handle_control);
-    server.on("/update2", handle_update2);
     server.onNotFound([](){
         server.send(404, "text/plain", "The content you are looking for was not found.\n");
         Serial.println("404: " + server.uri());
