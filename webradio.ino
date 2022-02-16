@@ -101,6 +101,7 @@ class String_plus : public String
 
 /* Global variables */
 int volume = 50; /* default if no config in flash */
+int update_progress = 0;
 unsigned long last_save = 0;
 unsigned long last_volume = 0;
 unsigned long last_reconnect = (unsigned long)-5000;
@@ -491,9 +492,11 @@ void draw_display(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, in
 #define VOL_H 12
 void draw_volume(OLEDDisplay *display, OLEDDisplayUiState* state)
 {
-    if (millis() - last_volume > 5000)
+    if (!(updating && Update.isRunning()) && (millis() - last_volume > 5000))
         return; /* only drav volume bar for 5 seconds */
     int progress = volume * 100 / MAX_VOL;
+    if (updating)
+        progress = update_progress;
     /* clear background of volume bar */
     display->setColor(BLACK);
     display->fillRect(0, 64 - VOL_H - 1, 128, VOL_H + 1);
@@ -502,12 +505,36 @@ void draw_volume(OLEDDisplay *display, OLEDDisplayUiState* state)
     display->drawProgressBar(0, 64 - VOL_H - 1, 127, VOL_H, progress);
     /* draw caption inside volume bar */
     display->setColor(INVERSE);
-    display->setFont(ArialMT_Plain_10);
+    display->setFont(DejaVu_Sans_10);
     display->setTextAlignment(TEXT_ALIGN_CENTER_BOTH);
-    display->drawString(64, 64 - VOL_H/2 - 1, "Volume " +String(progress, DEC) + "%");
+    display->drawString(64, 64 - VOL_H/2 - 1, String(updating ? "Update: ":"Volume ") +String(progress, DEC) + "%");
     /* reset settings */
     display->setTextAlignment(TEXT_ALIGN_LEFT);
     display->setColor(WHITE);
+}
+
+void draw_update_progress(size_t done, size_t total)
+{
+    static uint32_t size = ESP.getSketchSize();
+    static int last_progress = -1;
+    if (! updating) {
+        updating = true;
+        audio.stopSong();
+        A_station = "OTA update...";
+        A_streamtitle = "";
+        Serial.println("\r\nUPDATE START");
+    }
+    /* due to httpupload's code, the size of the upload is not known :-(
+     * "total" is just the maximum that fits into flash
+     * so just use current sketch size as 100% for progress bar :-) */
+    if (done < size)
+        update_progress = done * 100 / size;
+    else
+        update_progress = 100;
+    if (update_progress != last_progress) {
+        Serial.printf("Progress: %u%% (%7d/%d)\r\n", update_progress, done, size);
+        ui.update();
+    }
 }
 
 FrameCallback frames[] = { draw_display };
@@ -591,6 +618,7 @@ void setup()
 
     httpUpdater.setup(&server);
     server.begin();
+    Update.onProgress(draw_update_progress);
 }
 
 void change_station(String url)
@@ -655,6 +683,13 @@ void loop()
     if (millis() - last_save > 10000)
         last_save = save_config();
 
+    if (updating && Update.hasError()) {
+        /* we should never be in the loop when Update.isRunning() ... so update failed. */
+        updating = false;
+        Update.clearError();
+        A_streamtitle = "Update failed!";
+        last_reconnect = millis(); /* show "Update failed" for 5 seconds... */
+    }
     ui.update();
 }
 
