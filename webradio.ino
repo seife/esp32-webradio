@@ -189,6 +189,7 @@ void add_sysinfo(String &s)
         "Uptime: " + time_string() +
         ", Total PSRAM: " + String(ESP.getPsramSize() / 1024) +
         "kiB, Free PSRAM: " + String(ESP.getFreePsram() / 1024) +
+        "kiB, Free heap: " + String(ESP.getFreeHeap() / 1024) +
         "kiB, build date: " + __DATE__ +", " + __TIME__ +
         "</p>\n";
 }
@@ -266,6 +267,7 @@ void handle_control()
         "  \"playing\": " + String(playing) + ",\n"
         "  \"volume\": " + String(volume) + ",\n"
         "  \"uptime\": " + String(uptime_sec()) + ",\n"
+        "  \"heap_free\": " + String(ESP.getFreeHeap()) + ",\n"
         "  \"psram\": " + String(ESP.getPsramSize()) + ",\n"
         "  \"psram_free\": " + String(ESP.getFreePsram()) + "\n"
         "}\n";
