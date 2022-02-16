@@ -88,12 +88,24 @@
 /* update rate for the OLED display */
 #define DISPLAY_FPS 5
 
+/* for easy handling of changed A_streaminfo... */
+class String_plus : public String
+{
+ private:
+     bool m_init;
+ public:
+     String_plus(String s = String()) : String(s), m_init { true } {};
+     String_plus(const char* s) : String(s), m_init { true } {};
+     bool changed(void) { bool _x = m_init; m_init = false; return _x; };
+};
+
 /* Global variables */
 int volume = 50; /* default if no config in flash */
 unsigned long last_save = 0;
 unsigned long last_volume = 0;
 unsigned long last_reconnect = (unsigned long)-5000;
-String A_station, A_streaminfo, A_streamtitle, A_bitrate, A_icyurl, A_lasthost, A_url;
+String A_streaminfo, A_bitrate, A_icyurl, A_lasthost, A_url;
+String_plus A_streamtitle, A_station;
 bool playing = false;
 bool updating = false;
 
@@ -383,8 +395,17 @@ void draw_display(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, in
     static int bufmax = buf_sz > 1024*100?1024*100:buf_sz;
     String status;
     display->setFont(DejaVu_Sans_12);
+    if (A_streamtitle.changed()) {
+        off_line = 0;
+        pause_line = 1;
+    }
+    if (A_station.changed()) {
+        h_width = display->getStringWidth(A_station);
+        pause = 0;
+        direction = -1;
+        offset = 0;
+    }
     /* draw station name, scrolling horizontally if it does not fit on the display */
-    h_width = display->getStringWidth(A_station);
     if (h_width > 128) {
         if (direction < 0 && h_width + offset <= 128 && pause <= 0) {
             pause = DISPLAY_FPS; /* wait for one second before reversing direction */
