@@ -5,7 +5,6 @@ DEPS=(
 	https://github.com/schreibfaul1/ESP32-audioI2S.git
 	https://github.com/maditnerd/es8388
 	https://github.com/mathertel/RotaryEncoder.git
-	https://github.com/ayushsharma82/ElegantOTA.git
 	https://github.com/ThingPulse/esp8266-oled-ssd1306
 )
 

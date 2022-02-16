@@ -50,7 +50,7 @@
 #include "wifi_functions.h"
 
 #include <WebServer.h>
-#include <ElegantOTA.h>     // https://github.com/ayushsharma82/ElegantOTA, MIT License
+#include <HTTPUpdateServer.h>
 
 #include "LittleFS.h"
 #include "ES8388.h"         // https://github.com/maditnerd/es8388, GPLv3
@@ -102,6 +102,7 @@ RotaryEncoder *encoder = nullptr;
 
 /* Global objects */
 WebServer server(80);
+HTTPUpdateServer httpUpdater;
 ES8388 es;
 Audio audio;
 SH1106Spi display(DISP_RST, DISP_DC, DISP_CS); /* CS is unused anyway */
@@ -477,7 +478,7 @@ void setup()
         Serial.println("404: " + server.uri());
     });
 
-    ElegantOTA.begin(&server);
+    httpUpdater.setup(&server);
     server.begin();
 }
 
