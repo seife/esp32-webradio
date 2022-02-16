@@ -60,6 +60,7 @@
 
 #include "SH1106Spi.h"      // https://github.com/ThingPulse/esp8266-oled-ssd1306, MIT License
 #include "OLEDDisplayUi.h"
+#include "font.h"
 
 /* es8388 config */
 // I2S GPIOs
@@ -83,6 +84,9 @@
 #define DISP_CS   -1  // Chip select control pin is hard wired to ground
 #define DISP_DC    5  // Data Command control pin. 5 is VSPI_CS, but CS is unused.
 #define DISP_RST  19  // original MISO, not used on OLED display
+
+/* update rate for the OLED display */
+#define DISPLAY_FPS 5
 
 /* Global variables */
 int volume = 50; /* default if no config in flash */
@@ -369,13 +373,81 @@ unsigned long save_config()
     return millis();
 }
 
+/* this gets called DISPLAY_FPS times per second */
 void draw_display(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y)
 {
-    /* TODO: scroll if text exceeds display size */
-    display->setFont(ArialMT_Plain_16);
-    display->drawString(x, y, A_station);
-    display->setFont(ArialMT_Plain_10);
-    display->drawStringMaxWidth(x, x+16, 128, A_streamtitle);
+    static uint16_t h_width = 0;
+    static int offset = 0, off_line = 0;
+    static int direction = -1;
+    static int pause = 0, pause_line = 1;
+    static int bufmax = buf_sz > 1024*100?1024*100:buf_sz;
+    String status;
+    display->setFont(DejaVu_Sans_12);
+    /* draw station name, scrolling horizontally if it does not fit on the display */
+    h_width = display->getStringWidth(A_station);
+    if (h_width > 128) {
+        if (direction < 0 && h_width + offset <= 128 && pause <= 0) {
+            pause = DISPLAY_FPS; /* wait for one second before reversing direction */
+            direction = 1;
+        }
+        if (--pause <= 0) {
+           offset += direction;
+           pause = 0;
+        }
+        if (offset >= 0 && pause <= 0) {
+            pause = DISPLAY_FPS;
+            direction = -1;
+        }
+    } else {
+        offset = 0;
+        direction = -1;
+    }
+    display->drawString(x + offset, y, A_station);
+    /* draw a small status line with codec, samplrate, bitrate, number of channels and
+     * two bars: top is buffer fill, bottom bar is WiFi.rssi() */
+    display->drawHorizontalLine(x, y + 16, 128);
+    display->setFont(DejaVu_Sans_8);
+    String sr = String(audio.getSampleRate() / 1000.0, 2);
+    while (sr.endsWith("0")||sr.endsWith("."))
+        sr.remove(sr.length()-1); /* remove trailing zeroes and dot */
+    String br = String(audio.getBitRate(true)/1000);
+    if (audio.isRunning())
+        status = String(audio.getCodecname()) + "," +
+            sr + "kHz," + br + "k," +
+            String(audio.getChannels()) +"ch";
+    else
+        status = "not playing... ";
+    int barstartx = display->getStringWidth(status) + 3;
+    display->drawString(x, y+17, status);
+    int barwidth;
+    if (audio.isRunning()) {
+        barwidth = (128-barstartx) * (audio.inBufferFilled() > bufmax?bufmax:audio.inBufferFilled()) / bufmax;
+        display->fillRect(barstartx+x, y+18, barwidth, 3); /* buffer */
+    }
+    if (WiFi.RSSI() != 0)
+        barwidth = (128-barstartx) * (100+(WiFi.RSSI() > -50?-50:WiFi.RSSI()))/ 50;
+    else
+        barwidth = 0;
+    display->fillRect(barstartx+x, y+18+5, barwidth, 3); /* RSSI */
+    display->drawHorizontalLine(x, y + 18 + 5 + 5, 128);
+    /* draw stream title, scrolling vertically if it does not fit on the screen */
+    display->setFont(DejaVu_Sans_11);
+    while (isspace(A_streamtitle[off_line])) /* remove leading spaces. Should not be needed... */
+        off_line++;
+#if 0 /* unpatched esp8266-oled-ssd1306 */
+    display->drawStringMaxWidth(x, y+28, 128, A_streamtitle);
+#else /* patched github/seife/esp8266-oled-ssd1306 */
+    int toomuch = display->drawStringMaxWidth(x, y+28, 128, A_streamtitle.substring(off_line));
+    if (pause_line == 0) {
+        if (toomuch != 0)
+            off_line += toomuch;
+        else
+            off_line = 0;
+    }
+    pause_line++;
+    pause_line %= (DISPLAY_FPS * 2); /* 2 seconds per line scroll */
+#endif
+    return;
 }
 
 #define VOL_H 12
@@ -424,12 +496,13 @@ void setup()
     }
 
     SPI.begin(DISP_SCLK, DISP_MOSI, DISP_MOSI, DISP_CS); /* explicitly MISO=MOSI to free MISO pin for RESET */
-    ui.setTargetFPS(10);
+    ui.setTargetFPS(DISPLAY_FPS);
     ui.setFrames(frames, frameCount);
     ui.setOverlays(overlays, overlaysCount);
     ui.disableAutoTransition();
     ui.disableAllIndicators();
     ui.init();
+    display.setContrast(128);
 
     encoder = new RotaryEncoder(PIN_IN1, PIN_IN2, RotaryEncoder::LatchMode::TWO03);
     attachInterrupt(digitalPinToInterrupt(PIN_IN1), checkPosition, CHANGE);
