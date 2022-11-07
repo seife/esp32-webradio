@@ -101,6 +101,7 @@ class String_plus : public String
 
 /* Global variables */
 int volume = 50; /* default if no config in flash */
+int enc_mode = (int)RotaryEncoder::LatchMode::FOUR0; /* 1,2 or3 */
 int update_progress = 0;
 unsigned long last_save = 0;
 unsigned long last_volume = 0;
@@ -113,7 +114,7 @@ bool updating = false;
 /* configuration */
 int buf_sz = 32768;
 
-enum { CONF_VOL = 1, CONF_URL = 2, CONF_PLAY = 4 };
+enum { CONF_VOL = 1, CONF_URL = 2, CONF_PLAY = 4, CONF_ENC = 8 };
 
 RotaryEncoder *encoder = nullptr;
 
@@ -262,6 +263,22 @@ void handle_control()
         else
             volume = set_volume(vol);
     }
+    if (server.hasArg("enc_mode")) {
+        int enc = server.arg("enc_mode").toInt();
+        if (enc < (int)RotaryEncoder::LatchMode::FOUR3 || enc > (int)RotaryEncoder::LatchMode::TWO03)
+            Serial.println("invalid encoder value: " + server.arg("enc_mode"));
+        else {
+            if (enc_mode != enc) {
+                Serial.println("setting encoder type to " + server.arg("enc_mode"));
+                RotaryEncoder *tmp = encoder;
+                enc_mode = enc;
+                encoder = new RotaryEncoder(PIN_IN1, PIN_IN2, (RotaryEncoder::LatchMode)enc_mode);
+                Serial.println("deleting original encoder");
+                delete tmp;
+                Serial.println("done");
+            }
+        }
+    }
     /* TODO: use proper JSON liberary? */
     String index;
     if (html) {
@@ -281,6 +298,7 @@ void handle_control()
         "  \"title\": \"" + json_replace(A_streamtitle) + "\",\n"
         "  \"playing\": " + String(playing) + ",\n"
         "  \"volume\": " + String(volume) + ",\n"
+        "  \"enc_mode\": " + String(enc_mode) + ",\n"
         "  \"uptime\": " + String(uptime_sec()) + ",\n"
         "  \"heap_free\": " + String(ESP.getFreeHeap()) + ",\n"
         "  \"psram\": " + String(ESP.getPsramSize()) + ",\n"
@@ -330,7 +348,7 @@ String read_file(File &file)
     return ret;
 }
 
-int load_config(int &v, String &u, bool debug=false)
+int load_config(int &v, int &e, String &u, bool debug=false)
 {
     int ret = 0;
     File cfg = LittleFS.open("/volume");
@@ -339,6 +357,14 @@ int load_config(int &v, String &u, bool debug=false)
         v = read_file(cfg).toInt();
         if (debug)
             Serial.printf("load_config: v is %d\r\n", v);
+        cfg.close();
+    }
+    cfg = LittleFS.open("/enc_mode");
+    if (cfg) {
+        ret |= CONF_ENC;
+        e = read_file(cfg).toInt();
+        if (debug)
+            Serial.printf("load_config: e is %d\r\n", e);
         cfg.close();
     }
     cfg = LittleFS.open("/url");
@@ -358,13 +384,19 @@ int load_config(int &v, String &u, bool debug=false)
 
 unsigned long save_config()
 {
-    int v, ret;
+    int v, e, ret;
     String u;
-    ret = load_config(v, u);
+    ret = load_config(v, e, u);
     if (!(ret & CONF_VOL) || v != volume) {
         Serial.println("Save volume...");
         File cfg = LittleFS.open("/volume", FILE_WRITE);
         cfg.print(volume);
+        cfg.close();
+    }
+    if (!(ret & CONF_ENC) || e != enc_mode) {
+        Serial.println("Save enc_mode...");
+        File cfg = LittleFS.open("/enc_mode", FILE_WRITE);
+        cfg.print(enc_mode);
         cfg.close();
     }
     if (!(ret & CONF_URL) || u != A_url) {
@@ -539,7 +571,7 @@ void setup()
     else {
         Serial.print("LittleFS total: "); Serial.println(LittleFS.totalBytes());
         Serial.print("LittleFS used:  "); Serial.println(LittleFS.usedBytes());
-        int ret = load_config(volume, A_url, true);
+        int ret = load_config(volume, enc_mode, A_url, true);
         playing = ret & CONF_PLAY;
     }
 
@@ -552,7 +584,7 @@ void setup()
     ui.init();
     display.setContrast(128);
 
-    encoder = new RotaryEncoder(PIN_IN1, PIN_IN2, RotaryEncoder::LatchMode::TWO03);
+    encoder = new RotaryEncoder(PIN_IN1, PIN_IN2, (RotaryEncoder::LatchMode)enc_mode);
     attachInterrupt(digitalPinToInterrupt(PIN_IN1), checkPosition, CHANGE);
     attachInterrupt(digitalPinToInterrupt(PIN_IN2), checkPosition, CHANGE);
 
