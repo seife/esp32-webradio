@@ -206,7 +206,7 @@ void handle_index()
         "<tr><td>Currently playing</td><td>" + A_station + "</td></tr>\n"
         "<tr><td>Title</td><td>"+ A_streamtitle + "</td></tr>\n"
         "<tr><td>Stream URL</td><td>" + A_url + "</td></tr>\n"
-        "<tr><td>found lasthost</td><td>" + A_lasthost + "</td></tr>\n"
+        "<tr><td>found lasthost</td><td><a href=\"" + A_lasthost + "\">Link...</a></td></tr>\n"
         "<tr><td>found icy URL</td><td>" + A_icyurl +"</td></tr>\n"
         "</table>\n"
         "<p></p>\n"
@@ -299,6 +299,8 @@ void handle_control()
         "  \"playing\": " + String(playing) + ",\n"
         "  \"volume\": " + String(volume) + ",\n"
         "  \"enc_mode\": " + String(enc_mode) + ",\n"
+        "  \"wifi_signal\": " + String(WiFi.RSSI()) + ",\n"
+        "  \"wifi_bssid\": \"" + WiFi.BSSIDstr() + "\",\n"
         "  \"uptime\": " + String(uptime_sec()) + ",\n"
         "  \"heap_free\": " + String(ESP.getFreeHeap()) + ",\n"
         "  \"psram\": " + String(ESP.getPsramSize()) + ",\n"
@@ -547,6 +549,7 @@ void draw_update_progress(size_t done, size_t total)
     else
         update_progress = 100;
     if (update_progress != last_progress) {
+        last_progress = update_progress;
         Serial.printf("Progress: %u%% (%7d/%d)\r\n", update_progress, done, size);
         ui.update();
     }
