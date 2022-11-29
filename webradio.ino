@@ -52,7 +52,11 @@
 #include <WebServer.h>
 #include <HTTPUpdateServer.h>
 
+#if 0
 #include "LittleFS.h"
+#else
+#include <Preferences.h>
+#endif
 #include "ES8388.h"         // https://github.com/maditnerd/es8388, GPLv3
 #include "Audio.h"          // https://github.com/schreibfaul1/ESP32-audioI2S, GPLv3
 
@@ -125,6 +129,7 @@ ES8388 es;
 Audio audio;
 SH1106Spi display(DISP_RST, DISP_DC, DISP_CS); /* CS is unused anyway */
 OLEDDisplayUi ui(&display);
+Preferences pref;
 
 #if 0
 /* onboard  buttons
@@ -341,6 +346,7 @@ int set_volume(int vol)
     return vol;
 }
 
+#if 0
 /* LittleFS helper functions */
 String read_file(File &file)
 {
@@ -419,6 +425,29 @@ unsigned long save_config()
     }
     return millis();
 }
+#else
+/* volume, enc_mode, url, playing */
+void load_config()
+{
+    pref.begin("webradio", true);
+    volume = pref.getInt("volume", volume);
+    enc_mode = pref.getInt("enc_mode", enc_mode);
+    A_url = pref.getString("url");
+    playing = pref.getBool("playing", false);
+    pref.end();
+}
+
+unsigned long save_config()
+{
+    pref.begin("webradio", false);
+    pref.putInt("volume", volume);
+    pref.putInt("enc_mode", enc_mode);
+    pref.putString("url", A_url);
+    pref.putBool("playing", playing);
+    pref.end();
+    return millis();
+}
+#endif
 
 /* this gets called DISPLAY_FPS times per second */
 void draw_display(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y)
@@ -568,6 +597,7 @@ void setup()
     psramInit();
     Serial.print("PSRAM: ");
     Serial.println(ESP.getPsramSize());
+#if 0
     bool littlefs_ok = LittleFS.begin(FORMAT_LITTLEFS_IF_FAILED);
     if (!littlefs_ok)
         Serial.println("LittleFS Mount Failed");
@@ -577,6 +607,9 @@ void setup()
         int ret = load_config(volume, enc_mode, A_url, true);
         playing = ret & CONF_PLAY;
     }
+#else
+    load_config();
+#endif
 
     SPI.begin(DISP_SCLK, DISP_MOSI, DISP_MOSI, DISP_CS); /* explicitly MISO=MOSI to free MISO pin for RESET */
     ui.setTargetFPS(DISPLAY_FPS);
