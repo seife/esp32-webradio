@@ -114,6 +114,7 @@ String A_streaminfo, A_bitrate, A_icyurl, A_lasthost, A_url;
 String_plus A_streamtitle, A_station;
 bool playing = false;
 bool updating = false;
+uint8_t brightness = 128;
 
 /* encoder pushed? */
 bool butt_down = false;
@@ -273,6 +274,10 @@ void handle_control()
         else
             volume = set_volume(vol);
     }
+    if (server.hasArg("brightness")) {
+        brightness = server.arg("brightness").toInt();
+        display.setBrightness(brightness);
+    }
     if (server.hasArg("enc_mode")) {
         int enc = server.arg("enc_mode").toInt();
         if (enc < (int)RotaryEncoder::LatchMode::FOUR3 || enc > (int)RotaryEncoder::LatchMode::TWO03)
@@ -309,6 +314,7 @@ void handle_control()
         "  \"playing\": " + String(playing) + ",\n"
         "  \"volume\": " + String(volume) + ",\n"
         "  \"enc_mode\": " + String(enc_mode) + ",\n"
+        "  \"brightness\": " + String(brightness) + ",\n"
         "  \"wifi_signal\": " + String(WiFi.RSSI()) + ",\n"
         "  \"wifi_bssid\": \"" + WiFi.BSSIDstr() + "\",\n"
         "  \"uptime\": " + String(uptime_sec()) + ",\n"
@@ -445,6 +451,7 @@ void load_config()
     enc_mode = pref.getInt("enc_mode", enc_mode);
     A_url = pref.getString("url");
     playing = pref.getBool("playing", false);
+    brightness = pref.getInt("brightness", brightness);
     pref.end();
 }
 
@@ -455,6 +462,7 @@ unsigned long save_config()
     pref.putInt("enc_mode", enc_mode);
     pref.putString("url", A_url);
     pref.putBool("playing", playing);
+    pref.putInt("brightness", brightness);
     pref.end();
     return millis();
 }
@@ -629,7 +637,7 @@ void setup()
     ui.disableAutoTransition();
     ui.disableAllIndicators();
     ui.init();
-    display.setContrast(128);
+    display.setBrightness(brightness);
 
     encoder = new RotaryEncoder(PIN_IN1, PIN_IN2, (RotaryEncoder::LatchMode)enc_mode);
     pinMode(PIN_BUT, INPUT_PULLUP);
