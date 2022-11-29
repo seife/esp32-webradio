@@ -624,7 +624,7 @@ void setup()
     attachInterrupt(digitalPinToInterrupt(PIN_IN1), checkPosition, CHANGE);
     attachInterrupt(digitalPinToInterrupt(PIN_IN2), checkPosition, CHANGE);
 
-    start_WiFi();
+    start_WiFi("esp-webradio");
     Serial.printf("Connect to ES8388 codec... ");
     while (not es.begin(IIC_DATA, IIC_CLK))
     {

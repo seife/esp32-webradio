@@ -88,8 +88,10 @@ void start_WPS()
     Serial.println("end start_WPS()");
 }
 
-void start_WiFi()
+void start_WiFi(const char *hostname)
 {
+    if (hostname)
+        WiFi.setHostname(hostname);
     WiFi.onEvent(WiFiEvent);
     WiFi.begin();
 }
