@@ -744,42 +744,49 @@ void loop()
 }
 
 /* functions for callbacks from audio decoder */
+
+void audio_log(const char *tag, const char *info) {
+    Serial.print(time_string());
+    Serial.print(tag);
+    Serial.println(info);
+}
+
 void audio_info(const char *info){
-    Serial.print(">info        ====> "); Serial.println(info);
+    audio_log(">info        ==> ", info);
 }
 void audio_id3data(const char *info){  //id3 metadata
-    Serial.print(">id3data     ");Serial.println(info);
+    audio_log(">id3data     ", info);
 }
 void audio_eof_mp3(const char *info){  //end of file
-    Serial.print(">eof_mp3     ");Serial.println(info);
+    audio_log(">eof_mp3     ", info);
 }
 void audio_showstation(const char *info){
     A_station = String(info);
-    Serial.print(">station     ");Serial.println(info);
+    audio_log(">station     ", info);
 }
 void audio_showstreaminfo(const char *info){
     A_streaminfo = String(info);
-    Serial.print(">streaminfo  ");Serial.println(info);
+    audio_log(">streaminfo  ", info);
 }
 void audio_showstreamtitle(const char *info){
     A_streamtitle = String(info);
-    Serial.print(">streamtitle ");Serial.println(info);
+    audio_log(">streamtitle ", info);
 }
 void audio_bitrate(const char *info){
     A_bitrate = String(info);
-    Serial.print(">bitrate     ");Serial.println(info);
+    audio_log(">bitrate     ", info);
 }
 void audio_commercial(const char *info){  //duration in sec
-    Serial.print(">commercial  ");Serial.println(info);
+    audio_log(">commercial  ", info);
 }
 void audio_icyurl(const char *info){  //homepage
     A_icyurl = String(info);
-    Serial.print(">icyurl      ");Serial.println(info);
+    audio_log(">icyurl      ", info);
 }
 void audio_lasthost(const char *info){  //stream URL played
     A_lasthost = String(info);
-    Serial.print(">lasthost    ");Serial.println(info);
+    audio_log(">lasthost    ", info);
 }
 void audio_eof_speech(const char *info){
-    Serial.print(">eof_speech  ");Serial.println(info);
+    audio_log(">eof_speech  ", info);
 }
