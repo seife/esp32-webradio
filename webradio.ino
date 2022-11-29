@@ -770,15 +770,17 @@ void audio_showstreaminfo(const char *info){
 }
 void audio_showstreamtitle(const char *info){
     A_streamtitle = String(info);
-    audio_log(">streamtitle ", info);
+    // audio_log(">streamtitle ", info);
 }
 void audio_bitrate(const char *info){
     A_bitrate = String(info);
     audio_log(">bitrate     ", info);
 }
+#if 0
 void audio_commercial(const char *info){  //duration in sec
     audio_log(">commercial  ", info);
 }
+#endif
 void audio_icyurl(const char *info){  //homepage
     A_icyurl = String(info);
     audio_log(">icyurl      ", info);
