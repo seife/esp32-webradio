@@ -115,6 +115,10 @@ String_plus A_streamtitle, A_station;
 bool playing = false;
 bool updating = false;
 
+/* encoder pushed? */
+bool butt_down = false;
+uint32_t butt_last = 0; /* last change */
+
 /* configuration */
 int buf_sz = 32768;
 
@@ -154,6 +158,7 @@ const char*keydesc[] = { "BOOT", "KEY1", "KEY2", "HPD" };
 /* rotary encoder PINs, small JTAG pin header */
 #define PIN_IN1 12
 #define PIN_IN2 14
+#define PIN_BUT 13 /* push encoder, KEY2 on audiokit or JTAG header */
 
 #define FORMAT_LITTLEFS_IF_FAILED true
 
@@ -319,6 +324,12 @@ void handle_control()
 IRAM_ATTR void checkPosition()
 {
   encoder->tick(); // just call tick() to check the state.
+}
+
+IRAM_ATTR void button_push()
+{
+    butt_down = !digitalRead(PIN_BUT);
+    butt_last = millis();
 }
 
 /*
@@ -621,8 +632,10 @@ void setup()
     display.setContrast(128);
 
     encoder = new RotaryEncoder(PIN_IN1, PIN_IN2, (RotaryEncoder::LatchMode)enc_mode);
+    pinMode(PIN_BUT, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(PIN_IN1), checkPosition, CHANGE);
     attachInterrupt(digitalPinToInterrupt(PIN_IN2), checkPosition, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PIN_BUT), button_push, CHANGE);
 
     start_WiFi("esp-webradio");
     Serial.printf("Connect to ES8388 codec... ");
@@ -669,6 +682,7 @@ void setup()
     httpUpdater.setup(&server);
     server.begin();
     Update.onProgress(draw_update_progress);
+    butt_down = false; /* initialize to work around spurious "button down on start" problems */
 }
 
 void change_station(String url)
@@ -685,6 +699,7 @@ void change_station(String url)
     }
 }
 
+static int _old_wifistate = -1;
 void loop()
 {
 #if 0
@@ -739,6 +754,23 @@ void loop()
         Update.clearError();
         A_streamtitle = "Update failed!";
         last_reconnect = millis(); /* show "Update failed" for 5 seconds... */
+    }
+
+    if (wifi_state == STATE_DISC && wifi_state != _old_wifistate) {
+        A_station = "No WiFi connection";
+        A_streamtitle = "Long press encoder for WPS";
+    } else if (!playing && wifi_state == STATE_CONN && wifi_state != _old_wifistate) {
+        A_station = "SSID: " + WiFi.SSID();
+        A_streamtitle = "IP: " + WiFi.localIP().toString();
+    }
+    _old_wifistate = wifi_state;
+    if (butt_down) {
+        //Serial.print("button_down: "); Serial.print(butt_last); Serial.print(" "); Serial.print(digitalRead(PIN_BUT)); Serial.print(" ");Serial.println(millis());
+        if (millis() - butt_last > 5000) {
+            A_streamtitle = "Starting WPS";
+            start_WPS();
+            butt_down = false;
+        }
     }
     ui.update();
 }
