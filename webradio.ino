@@ -114,6 +114,7 @@ String A_streaminfo, A_bitrate, A_icyurl, A_lasthost, A_url;
 String_plus A_streamtitle, A_station;
 bool playing = false;
 bool updating = false;
+bool have_es8388 = true;
 uint8_t brightness = 128;
 
 /* encoder pushed? */
@@ -163,8 +164,8 @@ const char*keydesc[] = { "BOOT", "KEY1", "KEY2", "HPD" };
 
 #define FORMAT_LITTLEFS_IF_FAILED true
 
-/* maximum volume, 21 i2s + 96 es8288 steps */
-#define MAX_VOL 117
+/* maximum volume, audio.maxVolume i2s + 96 es8288 steps */
+int MAX_VOL;
 
 uint32_t uptime_sec()
 {
@@ -313,6 +314,7 @@ void handle_control()
         "  \"title\": \"" + json_replace(A_streamtitle) + "\",\n"
         "  \"playing\": " + String(playing) + ",\n"
         "  \"volume\": " + String(volume) + ",\n"
+        "  \"volume_max\": " + String(MAX_VOL) + ",\n"
         "  \"enc_mode\": " + String(enc_mode) + ",\n"
         "  \"brightness\": " + String(brightness) + ",\n"
         "  \"wifi_signal\": " + String(WiFi.RSSI()) + ",\n"
@@ -339,28 +341,40 @@ IRAM_ATTR void button_push()
 }
 
 /*
- * set_volume(0...117)
- * 0...21: set hardware volume to 1, software i2s volume to 0...21
- * 22...117: set software i2s volume to max (21), hardware volume to vol-21
+ * set_volume(0...MAX_VOL)
+ * 0...maxv: set hardware volume to 1, software i2s volume to vol
+ * maxv+1...MAX_VOL: set software i2s to maxv, hardware volume to vol-maxv
  */
 int set_volume(int vol)
 {
+    static uint8_t maxv = audio.maxVolume();
     if (vol < 0)
         vol = 0;
     if (vol > MAX_VOL)
         vol = MAX_VOL;
-    if (vol < 22) {
-        es.volume(VOLCTRL, 1);
+    if (vol <= maxv) {
+        if (have_es8388)
+            es.volume(VOLCTRL, 1);
         audio.setVolume(vol);
         Serial.printf("vol: %d ctrl: %d i2s: %d\r\n", vol, 1, vol);
     } else {
-        es.volume(VOLCTRL, vol-21);
-        audio.setVolume(21);
+        if (have_es8388)
+            es.volume(VOLCTRL, vol-maxv);
+        audio.setVolume(maxv);
         Serial.printf("vol: %d ctrl: %d i2s: %d\r\n", vol, vol-21, 21);
     }
     last_save = millis();
     last_volume = millis();
     return vol;
+}
+
+void hw_mute(bool mute)
+{
+    if (have_es8388) {
+        es.mute(ES8388::ES_OUT1, true);     /* loudspeaker */
+        es.mute(ES8388::ES_OUT2, mute);     /* headphone */
+        es.mute(ES8388::ES_MAIN, mute);
+    }
 }
 
 #if 0
@@ -647,22 +661,31 @@ void setup()
 
     start_WiFi("esp-webradio");
     Serial.printf("Connect to ES8388 codec... ");
-    while (not es.begin(IIC_DATA, IIC_CLK))
+    if (not es.begin(IIC_DATA, IIC_CLK))
     {
         Serial.println("Failed!");
-        delay(1000);
+        have_es8388 = false;
+        audio.setVolumeSteps(100); /* 100 steps for software control */
+        MAX_VOL = audio.maxVolume();
+    } else {
+        Serial.println("OK");
+        MAX_VOL = audio.maxVolume() + 96; /* 96 steps of es8388 */
     }
-    Serial.println("OK");
+    Serial.print("MAX_VOL: "); Serial.println(MAX_VOL);
 
-    es.volume(ES8388::ES_MAIN, 80);
-    es.volume(ES8388::ES_OUT1, 80);
-    es.volume(ES8388::ES_OUT2, 80);
-    // dis- or enable amplifier
-    pinMode(GPIO_PA_EN, OUTPUT);
-    digitalWrite(GPIO_PA_EN, LOW); /* disable */
+    if (have_es8388) {
+        hw_mute(true);
+        es.volume(ES8388::ES_MAIN, 80);
+        es.volume(ES8388::ES_OUT1, 80);
+        es.volume(ES8388::ES_OUT2, 96);
+        // dis- or enable amplifier
+        pinMode(GPIO_PA_EN, OUTPUT);
+        digitalWrite(GPIO_PA_EN, LOW); /* disable */
+    }
 
     audio.setPinout(I2S_BCLK, I2S_LRCK, I2S_SDOUT);
-    audio.i2s_mclk_pin_select(I2S_MCLK);
+    if (have_es8388)
+        audio.i2s_mclk_pin_select(I2S_MCLK);
 #if 0
     /* try to use PSRAM with buf_sz size */
     audio.setBufsize(-1, buf_sz);
@@ -672,9 +695,7 @@ void setup()
 #endif
     volume = set_volume(volume);
 
-    es.mute(ES8388::ES_OUT1, true);     /* loudspeaker */
-    es.mute(ES8388::ES_OUT2, false);    /* headphone */
-    es.mute(ES8388::ES_MAIN, false);
+    hw_mute(false);
 /*
     for (int i = 0; i < NUMKEYS; i++)
         pinMode(keys[i], INPUT_PULLUP);
