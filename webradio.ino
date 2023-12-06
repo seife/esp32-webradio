@@ -683,9 +683,10 @@ void setup()
         digitalWrite(GPIO_PA_EN, LOW); /* disable */
     }
 
-    audio.setPinout(I2S_BCLK, I2S_LRCK, I2S_SDOUT);
     if (have_es8388)
-        audio.i2s_mclk_pin_select(I2S_MCLK);
+        audio.setPinout(I2S_BCLK, I2S_LRCK, I2S_SDOUT, I2S_MCLK);
+    else
+        audio.setPinout(I2S_BCLK, I2S_LRCK, I2S_SDOUT);
 #if 0
     /* try to use PSRAM with buf_sz size */
     audio.setBufsize(-1, buf_sz);
