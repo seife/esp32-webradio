@@ -105,6 +105,7 @@ class String_plus : public String
 
 /* Global variables */
 int volume = 50; /* default if no config in flash */
+int8_t balance = 0; /* -16 to +16 */
 int enc_mode = (int)RotaryEncoder::LatchMode::FOUR0; /* 1,2 or3 */
 int update_progress = 0;
 unsigned long last_save = 0;
@@ -275,6 +276,10 @@ void handle_control()
         else
             volume = set_volume(vol);
     }
+    if (server.hasArg("bal")) {
+        int bal =server.arg("bal").toInt();
+        balance = set_balance(bal);
+    }
     if (server.hasArg("brightness")) {
         brightness = server.arg("brightness").toInt();
         display.setBrightness(brightness);
@@ -315,6 +320,7 @@ void handle_control()
         "  \"playing\": " + String(playing) + ",\n"
         "  \"volume\": " + String(volume) + ",\n"
         "  \"volume_max\": " + String(MAX_VOL) + ",\n"
+        "  \"balance\": " + String(balance) + ",\n"
         "  \"enc_mode\": " + String(enc_mode) + ",\n"
         "  \"brightness\": " + String(brightness) + ",\n"
         "  \"wifi_signal\": " + String(WiFi.RSSI()) + ",\n"
@@ -375,6 +381,12 @@ void hw_mute(bool mute)
         es.mute(ES8388::ES_OUT2, mute);     /* headphone */
         es.mute(ES8388::ES_MAIN, mute);
     }
+}
+
+int set_balance(int bal)
+{
+    audio.setBalance(bal);
+    return bal;
 }
 
 #if 0
