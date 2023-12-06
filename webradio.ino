@@ -116,6 +116,7 @@ String_plus A_streamtitle, A_station;
 bool playing = false;
 bool updating = false;
 bool have_es8388 = true;
+bool sleeping = false;
 uint8_t brightness = 128;
 
 /* encoder pushed? */
@@ -256,6 +257,8 @@ void handle_control()
         Serial.printf("  %d: '%s'='%s'\r\n", i, server.argName(i).c_str(), server.arg(i).c_str());
     bool html = server.hasArg("html");
     if (server.hasArg("play")) {
+        display.displayOn();
+        sleeping = false;
         String url = server.arg("play");
         if (url.length() > 0)
             A_url = url;
@@ -264,9 +267,15 @@ void handle_control()
         last_save = millis();
     }
     if (server.hasArg("stop")) {
+        if (server.arg("stop").toInt()) {
+            display.displayOff();
+            sleeping = true;
+        }
         playing = false;
         audio.stopSong();
         last_save = millis();
+        A_station = "Stopped";
+        A_streamtitle = "http://" + WiFi.localIP().toString();
     }
     if (server.hasArg("vol")) {
         char sign = server.arg("vol")[0];
@@ -608,6 +617,7 @@ void draw_update_progress(size_t done, size_t total)
 {
     static uint32_t size = ESP.getSketchSize();
     static int last_progress = -1;
+    sleeping = false;
     if (! updating) {
         updating = true;
         audio.stopSong();
@@ -770,6 +780,11 @@ void loop()
     if (!begin)
         Serial.println();
 #endif
+    server.handleClient();
+    if (sleeping) {
+        delay(1000);
+        return;
+    }
     audio.loop();
 
     /* if wifi is not connected initially, start playing after connect */
@@ -786,7 +801,6 @@ void loop()
         volume += newPos;
         volume = set_volume(volume);
     }
-    server.handleClient();
     if (millis() - last_save > 10000)
         last_save = save_config();
 
