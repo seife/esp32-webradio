@@ -321,12 +321,15 @@ void handle_control()
         "<p><a href=\"/\">back</a></p>\n"
         "</body>\n</html>\n";
     } else {
+        uint32_t b_fill = audio.inBufferFilled();
+        uint32_t b_free = audio.inBufferFree();
         index =
         "{\n"
         "  \"url\": \"" + json_replace(A_url) + "\",\n"
         "  \"station\": \"" + json_replace(A_station) + "\",\n"
         "  \"title\": \"" + json_replace(A_streamtitle) + "\",\n"
         "  \"playing\": " + String(playing) + ",\n"
+        "  \"bitrate\": " + String(audio.getBitRate(true)/1000) + ",\n"
         "  \"volume\": " + String(volume) + ",\n"
         "  \"volume_max\": " + String(MAX_VOL) + ",\n"
         "  \"balance\": " + String(balance) + ",\n"
@@ -336,6 +339,9 @@ void handle_control()
         "  \"wifi_bssid\": \"" + WiFi.BSSIDstr() + "\",\n"
         "  \"uptime\": " + String(uptime_sec()) + ",\n"
         "  \"heap_free\": " + String(ESP.getFreeHeap()) + ",\n"
+        "  \"buffer_size\": " + String(b_fill + b_free) +",\n"
+        "  \"buffer_free\": " + String(b_free) +",\n"
+        "  \"buffer_perc\": " + String(b_fill * 100 /(b_fill + b_free)) +",\n"
         "  \"psram\": " + String(ESP.getPsramSize()) + ",\n"
         "  \"psram_free\": " + String(ESP.getFreePsram()) + "\n"
         "}\n";
