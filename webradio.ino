@@ -124,7 +124,7 @@ bool butt_down = false;
 uint32_t butt_last = 0; /* last change */
 
 /* configuration */
-int buf_sz = 32768;
+int buf_sz = 100*1024;
 
 enum { CONF_VOL = 1, CONF_URL = 2, CONF_PLAY = 4, CONF_ENC = 8 };
 
@@ -709,12 +709,12 @@ void setup()
         audio.setPinout(I2S_BCLK, I2S_LRCK, I2S_SDOUT, I2S_MCLK);
     else
         audio.setPinout(I2S_BCLK, I2S_LRCK, I2S_SDOUT);
-#if 0
+#if 1
     /* try to use PSRAM with buf_sz size */
-    audio.setBufsize(-1, buf_sz);
+    audio.setBufsize(-1, buf_sz + 4*4096);
 #else
     /* do not try PSRAM */
-    audio.setBufsize(buf_sz, 0);
+    audio.setBufsize(buf_sz + 1600, 0);
 #endif
     volume = set_volume(volume);
 
