@@ -619,6 +619,7 @@ void draw_update_progress(size_t done, size_t total)
     static int last_progress = -1;
     sleeping = false;
     if (! updating) {
+        hw_mute(true);
         updating = true;
         audio.stopSong();
         A_station = "OTA update...";
@@ -809,6 +810,7 @@ void loop()
         updating = false;
         Update.clearError();
         A_streamtitle = "Update failed!";
+        hw_mute(false);
         last_reconnect = millis(); /* show "Update failed" for 5 seconds... */
     }
 
