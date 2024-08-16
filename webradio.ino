@@ -194,7 +194,7 @@ String time_string(void)
     if (now >= 24*60*60)
         ret += String(now / (24*60*60)) + "d ";
     now %= 24*60*60;
-    snprintf(timestr, 10, "%02d:%02d:%02d", now / (60*60), (now % (60*60)) / 60, now % 60);
+    snprintf(timestr, 10, "%02lu:%02lu:%02lu", now / (60*60), (now % (60*60)) / 60, now % 60);
     ret += String(timestr);
     return ret;
 }
@@ -634,7 +634,7 @@ void draw_update_progress(size_t done, size_t total)
         update_progress = 100;
     if (update_progress != last_progress) {
         last_progress = update_progress;
-        Serial.printf("Progress: %u%% (%7d/%d)\r\n", update_progress, done, size);
+        Serial.printf("Progress: %u%% (%7d/%lu)\r\n", update_progress, done, size);
         ui.update();
     }
 }
@@ -648,7 +648,7 @@ void setup()
 {
     Serial.begin(115200);
     Serial.println("\r\nReset");
-    Serial.printf_P(PSTR("Free mem=%d\r\n"), ESP.getFreeHeap());
+    Serial.printf_P(PSTR("Free mem=%lu\r\n"), ESP.getFreeHeap());
     psramInit();
     Serial.print("PSRAM: ");
     Serial.println(ESP.getPsramSize());
