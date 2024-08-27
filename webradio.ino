@@ -673,7 +673,7 @@ void setup()
     load_config();
 #endif
 
-    SPI.begin(DISP_SCLK, DISP_MOSI, DISP_MOSI, DISP_CS); /* explicitly MISO=MOSI to free MISO pin for RESET */
+    SPI.begin(DISP_SCLK, -1, DISP_MOSI, -1); /* unset MISO to free MISO pin for RESET */
     ui.setTargetFPS(DISPLAY_FPS);
     ui.setFrames(frames, frameCount);
     ui.setOverlays(overlays, overlaysCount);
