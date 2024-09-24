@@ -157,7 +157,14 @@ const char*keydesc[] = { "BOOT", "KEY1", "KEY2", "HPD" };
 #define LED_D4 22
 #define LED_D5 19  /* conflicts with KEY_3 */
 
-#define VOLCTRL ES8388::ES_MAIN
+/* ES_OUT1 Loudspeaker
+ * ES_OUT2 Headphone
+ * ES_MAIN ? => this is actually controlling DAC output attenuation, much like
+ *              software volume control!
+ * If ES_MAIN is used to control (and ES_OUT2 is left at high volume), then
+ * low volume on ES_MAIN lead to significant backround noise
+ */
+#define VOLCTRL ES8388::ES_OUT2
 
 /* rotary encoder PINs, small JTAG pin header */
 #define PIN_IN1 12
@@ -361,6 +368,12 @@ IRAM_ATTR void button_push()
     butt_last = millis();
 }
 
+/* revert the 0-100 calculation in es.volume :-( */
+void hw_volume(int vol)
+{
+    es.volume(VOLCTRL, vol * 100 / 0x21 + 1);
+}
+
 /*
  * set_volume(0...MAX_VOL)
  * 0...maxv: set hardware volume to 1, software i2s volume to vol
@@ -375,14 +388,15 @@ int set_volume(int vol)
         vol = MAX_VOL;
     if (vol <= maxv) {
         if (have_es8388)
-            es.volume(VOLCTRL, 1);
+            es.volume(VOLCTRL, 0); /* 0 == -30db, not muted */
         audio.setVolume(vol);
-        Serial.printf("vol: %d ctrl: %d i2s: %d\r\n", vol, 1, vol);
+        Serial.printf("vol: %d ctrl: %d i2s: %d\r\n", vol, 0, vol);
     } else {
         if (have_es8388)
-            es.volume(VOLCTRL, vol-maxv);
+            hw_volume(vol - maxv);
+            //es.volume(VOLCTRL, vol-maxv);
         audio.setVolume(maxv);
-        Serial.printf("vol: %d ctrl: %d i2s: %d\r\n", vol, vol-21, 21);
+        Serial.printf("vol: %d ctrl: %d i2s: %d\r\n", vol, vol-maxv, maxv);
     }
     last_save = millis();
     last_volume = millis();
@@ -698,15 +712,16 @@ void setup()
         MAX_VOL = audio.maxVolume();
     } else {
         Serial.println("OK");
-        MAX_VOL = audio.maxVolume() + 96; /* 96 steps of es8388 */
+        audio.setVolumeSteps(17); /* 17 steps for software control */
+        MAX_VOL = audio.maxVolume() + 0x21; /* 0x21 = 33 real hw steps of es8388 */
     }
     Serial.print("MAX_VOL: "); Serial.println(MAX_VOL);
 
     if (have_es8388) {
         hw_mute(true);
-        es.volume(ES8388::ES_MAIN, 80);
-        es.volume(ES8388::ES_OUT1, 80);
-        es.volume(ES8388::ES_OUT2, 96);
+        es.volume(ES8388::ES_MAIN, 100);
+        es.volume(ES8388::ES_OUT1, 100);
+        es.volume(ES8388::ES_OUT2, 100);
         // dis- or enable amplifier
         pinMode(GPIO_PA_EN, OUTPUT);
         digitalWrite(GPIO_PA_EN, LOW); /* disable */
