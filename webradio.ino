@@ -846,6 +846,7 @@ void loop()
     if (butt_down) {
         //Serial.print("button_down: "); Serial.print(butt_last); Serial.print(" "); Serial.print(digitalRead(PIN_BUT)); Serial.print(" ");Serial.println(millis());
         if (millis() - butt_last > 5000) {
+            audio.stopSong();
             A_streamtitle = "Starting WPS";
             start_WPS();
             butt_down = false;
