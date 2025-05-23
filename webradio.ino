@@ -330,6 +330,7 @@ void handle_control()
     } else {
         uint32_t b_fill = audio.inBufferFilled();
         uint32_t b_free = audio.inBufferFree();
+        uint32_t b_perc = b_fill * 100 / ((b_fill+b_free)?:1); /* avoid div/0 */
         index =
         "{\n"
         "  \"url\": \"" + json_replace(A_url) + "\",\n"
@@ -348,7 +349,7 @@ void handle_control()
         "  \"heap_free\": " + String(ESP.getFreeHeap()) + ",\n"
         "  \"buffer_size\": " + String(b_fill + b_free) +",\n"
         "  \"buffer_free\": " + String(b_free) +",\n"
-        "  \"buffer_perc\": " + String(b_fill * 100 /(b_fill + b_free)) +",\n"
+        "  \"buffer_perc\": " + String(b_perc) +",\n"
         "  \"psram\": " + String(ESP.getPsramSize()) + ",\n"
         "  \"psram_free\": " + String(ESP.getFreePsram()) + "\n"
         "}\n";
