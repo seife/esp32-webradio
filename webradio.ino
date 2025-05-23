@@ -732,12 +732,14 @@ void setup()
         audio.setPinout(I2S_BCLK, I2S_LRCK, I2S_SDOUT, I2S_MCLK);
     else
         audio.setPinout(I2S_BCLK, I2S_LRCK, I2S_SDOUT);
+#if 0
 #if 1
     /* try to use PSRAM with buf_sz size */
     audio.setBufsize(-1, buf_sz + 4*4096);
 #else
     /* do not try PSRAM */
     audio.setBufsize(buf_sz + 1600, 0);
+#endif
 #endif
     volume = set_volume(volume);
 
